@@ -396,3 +396,73 @@ h3 {
     flex-direction: column;
   }
 }
+
+/* ---------- Tambahan Campus Lost & Found ---------- */
+.header-actions { display: grid; gap: 10px; justify-items: end; }
+
+.summary-value { font-size: 1.5rem; }
+
+.tabs { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 18px; border-bottom: 1px solid #e4e7ec; }
+.tab { display: inline-flex; align-items: center; gap: 6px; padding: 10px 14px; border: 0; border-bottom: 3px solid transparent; background: transparent; color: #475467; font-weight: 700; cursor: pointer; }
+.tab.active { border-bottom-color: #2563eb; color: #1d4ed8; }
+.tab-count { padding: 1px 7px; border-radius: 999px; background: #eef2f6; color: #344054; font-size: 0.74rem; }
+
+.badge-group { display: inline-flex; flex-wrap: wrap; gap: 6px; justify-content: flex-end; }
+.card-line { display: block; margin-top: 6px; font-size: 0.9rem; }
+.card-line.muted { color: #667085; }
+
+.search-bar { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-bottom: 14px; }
+.search-bar input { grid-column: 1 / -1; }
+.search-bar .helper-text { grid-column: 1 / -1; margin: 0; }
+
+input, select, textarea { width: 100%; padding: 10px 12px; border: 1px solid #d0d5dd; border-radius: 9px; background: #fff; color: inherit; font: inherit; }
+input:focus-visible, select:focus-visible, textarea:focus-visible { outline: 3px solid rgba(37, 99, 235, 0.3); outline-offset: 1px; }
+textarea { resize: vertical; }
+
+.form { display: grid; gap: 14px; max-width: 860px; }
+.form.compact { gap: 10px; max-width: none; }
+.form-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+.field label { display: block; margin-bottom: 6px; font-size: 0.9rem; font-weight: 700; }
+.field-hint { margin: 4px 0 0; color: #667085; font-size: 0.82rem; }
+.field-error, .form-error { margin: 4px 0 0; color: #b42318; font-size: 0.88rem; font-weight: 600; }
+.form-error { padding: 10px 12px; border-radius: 9px; background: #fef3f2; }
+.form-success { margin: 0 0 10px; padding: 10px 12px; border-radius: 9px; background: #ecfdf3; color: #067647; font-weight: 600; }
+.checkbox { display: flex; align-items: flex-start; gap: 10px; }
+.checkbox input { width: auto; margin-top: 3px; }
+.checkbox small { color: #667085; }
+
+.notice { margin: 0 0 14px; padding: 10px 12px; border-radius: 9px; font-size: 0.9rem; line-height: 1.45; }
+.notice.info { background: #eff6ff; color: #1d4ed8; }
+.notice.warning { background: #fffaeb; color: #b54708; }
+.notice.neutral { background: #f2f4f7; color: #475467; }
+
+.handover { padding-top: 16px; border-top: 1px solid #eaecf0; }
+.manual-link { margin-top: 16px; }
+.manual-link label { display: block; margin-bottom: 6px; font-weight: 700; font-size: 0.9rem; }
+.manual-link select { flex: 1 1 200px; width: auto; }
+.notification.unread { border-left: 3px solid #2563eb; padding-left: 10px; }
+code { padding: 2px 6px; border-radius: 6px; background: #f2f4f7; }
+.primary-button:disabled { opacity: 0.85; }
+
+@media (max-width: 760px) {
+  .header-actions { justify-items: start; }
+  .form-grid, .search-bar { grid-template-columns: 1fr; }
+}
+
+/* ---------- Pemisahan peran ---------- */
+.role-switch { display: inline-flex; padding: 3px; border: 1px solid #d0d5dd; border-radius: 10px; background: #fff; }
+.role-switch button { padding: 8px 12px; border: 0; border-radius: 8px; background: transparent; color: #475467; font-weight: 700; cursor: pointer; }
+.role-switch button.active { background: #2563eb; color: #fff; }
+.overview-grid { grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); }
+.status-badge.danger { background: #fef3f2; color: #b42318; }
+.identity { display: flex; align-items: center; gap: 8px; font-size: 0.9rem; font-weight: 700; }
+.identity input { width: 200px; }
+.claim-card { display: grid; gap: 10px; margin-bottom: 14px; padding: 14px; border: 1px solid #e4e7ec; border-radius: 12px; background: #fff; }
+.claim-item { padding: 10px 12px; border-radius: 9px; background: #f9fafb; }
+.claim-item p { margin: 0 0 4px; }
+.claim-list { display: grid; gap: 4px; }
+.report-card { padding: 14px; border: 1px solid #e4e7ec; border-radius: 12px; background: #fff; list-style: none; }
+.report-card p { margin: 0 0 4px; }
+.card-line { display: block; margin-top: 4px; font-size: 0.9rem; }
+.card-line.muted { color: #667085; }
+.badge-group { display: inline-flex; flex-wrap: wrap; gap: 6px; justify-content: flex-end; }
