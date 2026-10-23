@@ -5,12 +5,8 @@ export default function ResetControl({ onReset }) {
 
   if (!isConfirming) {
     return (
-      <button
-        className="secondary-button"
-        type="button"
-        onClick={() => setIsConfirming(true)}
-      >
-        Reset Demo Data
+      <button className="secondary-button" type="button" onClick={() => setIsConfirming(true)}>
+        Reset Data Demo
       </button>
     );
   }
@@ -21,13 +17,13 @@ export default function ResetControl({ onReset }) {
   }
 
   return (
-    <div className="reset-control" role="group" aria-label="Confirm reset demo data">
-      <span>Reset demo data?</span>
+    <div className="reset-control" role="group" aria-label="Konfirmasi reset data demo">
+      <span>Reset data demo?</span>
       <button className="secondary-button" type="button" onClick={() => setIsConfirming(false)}>
-        Cancel
+        Batal
       </button>
       <button className="primary-button" type="button" onClick={confirmReset}>
-        Confirm Reset
+        Ya, Reset
       </button>
     </div>
   );
