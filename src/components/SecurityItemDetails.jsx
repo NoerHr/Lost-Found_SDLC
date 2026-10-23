@@ -1,8 +1,13 @@
-import { formatDateTime } from '../utils/itemUtils.js';
+import StatusBadge from './StatusBadge.jsx';
+import ClaimCard from './ClaimCard.jsx';
+import ClaimForm from './ClaimForm.jsx';
+import HandoverSection from './HandoverSection.jsx';
+import { formatDateTime, getClaimsForItem } from '../utils/itemUtils.js';
 
-// Rincian LENGKAP khusus petugas (US1 AC1.2): termasuk lokasi penyimpanan.
-export default function SecurityItemDetails({ item }) {
+// Rincian LENGKAP khusus petugas (US1 AC1.2) + klaim masuk + penyerahan (US6).
+export default function SecurityItemDetails({ item, state, data, actions }) {
   if (!item) return <div className="empty-state">Pilih catatan barang untuk melihat rinciannya.</div>;
+  const claims = getClaimsForItem(data, item.id);
 
   return (
     <>
@@ -11,6 +16,9 @@ export default function SecurityItemDetails({ item }) {
           <p className="eyebrow">{item.id}</p>
           <h2>{item.category}</h2>
         </div>
+        <span className="badge-group">
+          <StatusBadge status={state} />
+        </span>
       </div>
 
       <dl className="details-list">
@@ -23,6 +31,19 @@ export default function SecurityItemDetails({ item }) {
         <dt>Lokasi penyimpanan</dt><dd>{item.storageLocation}</dd>
         <dt>Dicatat</dt><dd>{formatDateTime(item.recordedAt)}</dd>
       </dl>
+
+      <section className="secondary-section" aria-label="Klaim untuk barang ini">
+        <h3>Klaim untuk barang ini ({claims.length})</h3>
+        {claims.length === 0 && <p className="helper-text">Belum ada klaim.</p>}
+        {claims.map((claim) => (
+          <ClaimCard key={claim.id} claim={claim} item={null} actions={actions} />
+        ))}
+        {item.status === 'STORED' && (
+          <ClaimForm key={item.id} askName onSubmit={(input) => actions.submitClaim(item.id, input, 'WALK_IN')} />
+        )}
+      </section>
+
+      <HandoverSection key={item.id} item={item} data={data} actions={actions} />
     </>
   );
 }
