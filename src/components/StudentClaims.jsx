@@ -2,7 +2,7 @@ import StatusBadge from './StatusBadge.jsx';
 import { formatDateTime } from '../utils/itemUtils.js';
 
 const messages = {
-  PENDING: 'Menunggu verifikasi petugas. Datang ke pos security untuk verifikasi.',
+  PENDING: 'Menunggu verifikasi petugas. Datang ke pos security dan sebutkan kode klaim bila ada.',
   APPROVED: 'Klaim disetujui petugas. Silakan datang ke pos security untuk serah terima.',
   RETURNED: 'Barang sudah diserahkan kepada Anda.',
 };
@@ -22,6 +22,7 @@ export default function StudentClaims({ claims, publicItems }) {
             <p className="card-line">
               {claim.status === 'REJECTED' ? `Klaim ditolak: ${claim.rejectReason}` : messages[claim.status]}
             </p>
+            {claim.claimCode && <p className="card-line">Kode klaim: <code>{claim.claimCode}</code></p>}
             <p className="card-line muted">Bukti Anda: {claim.proofNotes}</p>
             <p className="card-line muted">Diajukan {formatDateTime(claim.submittedAt)}</p>
           </li>

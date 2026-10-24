@@ -12,11 +12,11 @@ import { ROLES } from './data/constants.js';
 import { createSeedData } from './data/seed.js';
 import {
   approveClaim, createFoundItem, getClaimsForStudent, getItemCounts, getItemState,
-  getPublicItems, markReturned, rejectClaim, setStudentName, submitClaim,
+  getPublicItems, markReturned, rejectClaim, setStudentName, setVerificationQuestions, submitClaim,
 } from './utils/itemUtils.js';
 import { loadState, resetState, saveState } from './utils/storage.js';
 
-const STORAGE_KEY = 'sdlc:case-a:us6-v1';
+const STORAGE_KEY = 'sdlc:case-a:roles-v2';
 
 export default function App() {
   const [data, setData] = useState(() => loadState(STORAGE_KEY, createSeedData));
@@ -44,6 +44,7 @@ export default function App() {
     approveClaim: (id, input) => apply((d) => approveClaim(d, id, { ...input, verifierName: staffName })),
     rejectClaim: (id, input) => apply((d) => rejectClaim(d, id, { ...input, verifierName: staffName })),
     markReturned: (id, input) => apply((d) => markReturned(d, id, input)),
+    setQuestions: (itemId, questions) => apply((d) => setVerificationQuestions(d, itemId, questions)),
     submitClaim: (itemId, input, source) => apply((d) => submitClaim(d, itemId, input, source)),
   };
 
@@ -58,7 +59,7 @@ export default function App() {
 
   function handleStudentClaim(itemId, input) {
     return apply((d) =>
-      submitClaim(d, itemId, { claimantName: d.studentName, proofNotes: input.proofNotes }, 'ONLINE'),
+      submitClaim(d, itemId, { claimantName: d.studentName, proofNotes: input.proofNotes, answers: input.answers }, 'ONLINE'),
     );
   }
 
@@ -106,6 +107,7 @@ export default function App() {
         ['Ada klaim', counts.claimed],
         ['Terverifikasi', counts.verified],
         ['Dikembalikan', counts.returned],
+        ['Bernilai tinggi (aktif)', counts.highValue],
       ]
     : [
         ['Barang temuan', counts.publicItems],

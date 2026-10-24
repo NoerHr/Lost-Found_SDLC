@@ -2,12 +2,14 @@ import StatusBadge from './StatusBadge.jsx';
 import ClaimCard from './ClaimCard.jsx';
 import ClaimForm from './ClaimForm.jsx';
 import HandoverSection from './HandoverSection.jsx';
+import VerificationQuestions from './VerificationQuestions.jsx';
 import { formatDateTime, getClaimsForItem } from '../utils/itemUtils.js';
 
-// Rincian LENGKAP khusus petugas (US1 AC1.2) + klaim masuk + penyerahan (US6).
+// Rincian LENGKAP khusus petugas (US1 AC1.2) + klaim masuk + penyerahan.
 export default function SecurityItemDetails({ item, state, data, actions }) {
   if (!item) return <div className="empty-state">Pilih catatan barang untuk melihat rinciannya.</div>;
   const claims = getClaimsForItem(data, item.id);
+  const hasActiveClaim = claims.some((c) => c.status === 'PENDING' || c.status === 'APPROVED');
 
   return (
     <>
@@ -17,6 +19,7 @@ export default function SecurityItemDetails({ item, state, data, actions }) {
           <h2>{item.category}</h2>
         </div>
         <span className="badge-group">
+          {item.highValue && <StatusBadge status="HIGH_VALUE" />}
           <StatusBadge status={state} />
         </span>
       </div>
@@ -32,6 +35,10 @@ export default function SecurityItemDetails({ item, state, data, actions }) {
         <dt>Dicatat</dt><dd>{formatDateTime(item.recordedAt)}</dd>
       </dl>
 
+      {item.highValue && item.status === 'STORED' && (
+        <VerificationQuestions key={item.id} item={item} locked={hasActiveClaim} onSave={actions.setQuestions} />
+      )}
+
       <section className="secondary-section" aria-label="Klaim untuk barang ini">
         <h3>Klaim untuk barang ini ({claims.length})</h3>
         {claims.length === 0 && <p className="helper-text">Belum ada klaim.</p>}
@@ -39,7 +46,7 @@ export default function SecurityItemDetails({ item, state, data, actions }) {
           <ClaimCard key={claim.id} claim={claim} item={null} actions={actions} />
         ))}
         {item.status === 'STORED' && (
-          <ClaimForm key={item.id} askName onSubmit={(input) => actions.submitClaim(item.id, input, 'WALK_IN')} />
+          <ClaimForm key={`${item.id}-${(item.verificationQuestions ?? []).join('|')}`} askName highValue={item.highValue} questions={item.verificationQuestions ?? []} onSubmit={(input) => actions.submitClaim(item.id, input, 'WALK_IN')} />
         )}
       </section>
 
