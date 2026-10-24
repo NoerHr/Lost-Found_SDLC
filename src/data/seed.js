@@ -1,6 +1,8 @@
 // Data demo. Semua entri dalam satu array harus punya key & tipe yang sama
 // (divalidasi utils/storage.js terhadap bentuk seed).
 
+const noReturn = { returnedTo: '', returnedAt: '', handoverNotes: '' };
+
 const items = [
   {
     id: 'ITEM-001',
@@ -15,6 +17,7 @@ const items = [
     storageLocation: 'Lemari Pos Security - Rak 1',
     status: 'STORED',
     recordedAt: '2026-10-08T03:20:00.000Z',
+    ...noReturn,
   },
   {
     id: 'ITEM-002',
@@ -29,6 +32,7 @@ const items = [
     storageLocation: 'Lemari Pos Security - Rak 2',
     status: 'STORED',
     recordedAt: '2026-10-09T06:10:00.000Z',
+    ...noReturn,
   },
   {
     id: 'ITEM-003',
@@ -43,6 +47,7 @@ const items = [
     storageLocation: 'Lemari Pos Security - Rak 2',
     status: 'STORED',
     recordedAt: '2026-10-09T08:40:00.000Z',
+    ...noReturn,
   },
   {
     id: 'ITEM-004',
@@ -57,6 +62,7 @@ const items = [
     storageLocation: 'Lemari Pos Security - Rak 3',
     status: 'STORED',
     recordedAt: '2026-10-10T05:30:00.000Z',
+    ...noReturn,
   },
   {
     id: 'ITEM-005',
@@ -71,6 +77,7 @@ const items = [
     storageLocation: 'Lemari Pos Security - Rak 3',
     status: 'STORED',
     recordedAt: '2026-10-10T09:05:00.000Z',
+    ...noReturn,
   },
   {
     id: 'ITEM-006',
@@ -85,6 +92,7 @@ const items = [
     storageLocation: 'Laci Pos Security',
     status: 'STORED',
     recordedAt: '2026-10-11T02:50:00.000Z',
+    ...noReturn,
   },
   {
     id: 'ITEM-007',
@@ -99,6 +107,7 @@ const items = [
     storageLocation: 'Lemari Pos Security - Rak 1',
     status: 'STORED',
     recordedAt: '2026-10-12T04:15:00.000Z',
+    ...noReturn,
   },
   {
     id: 'ITEM-008',
@@ -113,6 +122,7 @@ const items = [
     storageLocation: 'Brankas Pos Security',
     status: 'STORED',
     recordedAt: '2026-10-14T07:30:00.000Z',
+    ...noReturn,
   },
   {
     id: 'ITEM-009',
@@ -127,9 +137,37 @@ const items = [
     storageLocation: 'Lemari Pos Security - Rak 1',
     status: 'STORED',
     recordedAt: '2026-10-13T10:10:00.000Z',
+    ...noReturn,
+  },
+];
+
+const claims = [
+  {
+    id: 'CLM-001',
+    itemId: 'ITEM-007',
+    claimantName: 'Rina',
+    proofNotes: 'Dompet coklat, di dalamnya ada kartu mahasiswa dan foto kucing',
+    status: 'PENDING',
+    verifierName: '',
+    rejectReason: '',
+    submittedAt: '2026-10-15T03:00:00.000Z',
+    reviewedAt: '',
+    source: 'ONLINE',
+  },
+  {
+    id: 'CLM-002',
+    itemId: 'ITEM-002',
+    claimantName: 'Budi',
+    proofNotes: 'Tumbler biru, ada stiker bintang di tutup',
+    status: 'APPROVED',
+    verifierName: 'Ahmad Fuady',
+    rejectReason: '',
+    submittedAt: '2026-10-16T02:00:00.000Z',
+    reviewedAt: '2026-10-16T04:00:00.000Z',
+    source: 'WALK_IN',
   },
 ];
 
 export function createSeedData() {
-  return JSON.parse(JSON.stringify({ items }));
+  return JSON.parse(JSON.stringify({ studentName: 'Rina', items, claims }));
 }
