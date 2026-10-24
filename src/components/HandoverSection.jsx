@@ -2,7 +2,7 @@ import { useState } from 'react';
 import Field from './Field.jsx';
 import { canHandOver, formatDateTime, getApprovedClaim } from '../utils/itemUtils.js';
 
-// US6: penyerahan ditahan sampai ada klaim yang disetujui petugas.
+// US6 + US8: penyerahan ditahan sampai ada klaim yang disetujui petugas.
 export default function HandoverSection({ item, data, actions }) {
   const [notes, setNotes] = useState('');
   const [error, setError] = useState('');
@@ -31,7 +31,11 @@ export default function HandoverSection({ item, data, actions }) {
   return (
     <section className="secondary-section handover" aria-label="Penyerahan">
       <h3>Penyerahan</h3>
-      <p className="notice info">Barang hanya dapat ditandai dikembalikan setelah petugas memeriksa bukti kepemilikan.</p>
+      <p className={`notice ${item.highValue ? 'warning' : 'info'}`}>
+        {item.highValue
+          ? 'Barang bernilai tinggi: penyerahan ditahan sampai petugas memverifikasi bukti kepemilikan (aturan baru Campus Security).'
+          : 'Barang hanya dapat ditandai dikembalikan setelah petugas memeriksa bukti kepemilikan.'}
+      </p>
       {error && <p className="form-error" role="alert">{error}</p>}
       {ready && (
         <>

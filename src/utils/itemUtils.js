@@ -1,4 +1,4 @@
-import { PUBLIC_ITEM_FIELDS } from '../data/constants.js';
+import { HIGH_VALUE_CATEGORIES, PUBLIC_ITEM_FIELDS, VERIFICATION } from '../data/constants.js';
 
 // Semua operasi menerima `data` ({ studentName, items, claims }) dan
 // mengembalikan { ok: true, data, ... } atau { ok: false, error, errors }.
@@ -12,6 +12,15 @@ const clean = (value) => String(value ?? '').trim();
 const succeed = (data, extra = {}) => ({ ok: true, data, ...extra });
 const fail = (error, errors = {}) => ({ ok: false, error, errors });
 const sameName = (a, b) => clean(a).toLowerCase() === clean(b).toLowerCase();
+
+export function isHighValueCategory(category) {
+  return HIGH_VALUE_CATEGORIES.includes(category);
+}
+
+// P10 A7: ambang lolos verifikasi = 2/3 dari jumlah pertanyaan (3 -> 2, 4 -> 3, 5 -> 4).
+export function passThreshold(total) {
+  return Math.ceil((total * 2) / 3);
+}
 
 export function nextId(prefix, entries) {
   const max = entries.reduce((highest, entry) => {
@@ -57,6 +66,7 @@ export function getItemCounts(data) {
     claimed: states.filter((s) => s === 'CLAIMED').length,
     verified: states.filter((s) => s === 'VERIFIED').length,
     returned: states.filter((s) => s === 'RETURNED').length,
+    highValue: data.items.filter((i) => i.highValue && i.status !== 'RETURNED').length,
     pendingClaims: data.claims.filter((c) => c.status === 'PENDING').length,
     publicItems: data.items.filter((i) => i.status !== 'RETURNED').length,
     myClaims: getClaimsForStudent(data, data.studentName).length,
@@ -80,9 +90,10 @@ export function createFoundItem(data, input, now = new Date()) {
   const errors = validateFoundItem(input);
   if (Object.keys(errors).length > 0) return fail('Periksa kembali isian yang ditandai.', errors);
 
+  const category = clean(input.category);
   const item = {
     id: nextId('ITEM', data.items),
-    category: clean(input.category),
+    category,
     color: clean(input.color),
     brand: clean(input.brand),
     description: clean(input.description),
@@ -91,18 +102,48 @@ export function createFoundItem(data, input, now = new Date()) {
     locationFound: clean(input.locationFound),
     handedOverBy: clean(input.handedOverBy),
     storageLocation: clean(input.storageLocation),
+    // US8 / C4: jenis bernilai tinggi otomatis ditandai dan tidak bisa dilepas.
+    highValue: isHighValueCategory(category) || Boolean(input.highValue),
     status: 'STORED',
     recordedAt: now.toISOString(),
     returnedTo: '',
     returnedAt: '',
     handoverNotes: '',
+    // US8 / R11: pertanyaan verifikasi disiapkan petugas setelah barang dicatat.
+    verificationQuestions: [],
   };
   return succeed({ ...data, items: [item, ...data.items] }, { item });
 }
 
-/* ---------- US6: klaim diajukan mahasiswa, bukti kepemilikan diperiksa petugas ---------- */
+/* ---------- US8 / R11: petugas menyiapkan pertanyaan verifikasi ---------- */
 
-export function submitClaim(data, itemId, input, source = 'ONLINE', now = new Date()) {
+export function setVerificationQuestions(data, itemId, questions) {
+  const item = data.items.find((i) => i.id === itemId);
+  if (!item) return fail('Barang tidak ditemukan.');
+  if (!item.highValue) return fail('Pertanyaan verifikasi hanya untuk barang bernilai tinggi.');
+  if (item.status !== 'STORED') return fail('Barang ini sudah dikembalikan.');
+  if (data.claims.some((c) => c.itemId === itemId && (c.status === 'PENDING' || c.status === 'APPROVED'))) {
+    return fail('Pertanyaan tidak dapat diubah selama masih ada klaim aktif untuk barang ini.');
+  }
+
+  const list = (questions ?? []).map(clean).filter(Boolean);
+  const errors = {};
+  if (list.length < VERIFICATION.MIN_QUESTIONS || list.length > VERIFICATION.MAX_QUESTIONS) {
+    errors.questions = `Siapkan ${VERIFICATION.MIN_QUESTIONS}-${VERIFICATION.MAX_QUESTIONS} pertanyaan verifikasi.`;
+  } else if (new Set(list.map((q) => q.toLowerCase())).size !== list.length) {
+    errors.questions = 'Pertanyaan tidak boleh sama.';
+  }
+  if (Object.keys(errors).length > 0) return fail('Pertanyaan verifikasi belum dapat disimpan.', errors);
+
+  return succeed({
+    ...data,
+    items: data.items.map((i) => (i.id === itemId ? { ...i, verificationQuestions: list } : i)),
+  });
+}
+
+/* ---------- Klaim: diajukan mahasiswa, diverifikasi petugas (US6 + US8) ---------- */
+
+export function submitClaim(data, itemId, input, source = 'ONLINE', now = new Date(), codeSuffix = randomSuffix()) {
   const item = data.items.find((i) => i.id === itemId);
   if (!item) return fail('Barang tidak ditemukan.');
   if (item.status !== 'STORED') return fail('Barang ini sudah dikembalikan dan tidak dapat diklaim.');
@@ -117,11 +158,45 @@ export function submitClaim(data, itemId, input, source = 'ONLINE', now = new Da
   );
   if (duplicate) return fail('Klaim untuk barang ini sudah diajukan dan masih diproses.');
 
+  // US8 / R11: barang bernilai tinggi -> pengklaim menjawab pertanyaan verifikasi petugas.
+  let answers = [];
+  if (item.highValue) {
+    const questions = item.verificationQuestions ?? [];
+    if (questions.length < VERIFICATION.MIN_QUESTIONS) {
+      return fail(
+        source === 'ONLINE'
+          ? 'Petugas belum menyiapkan pertanyaan verifikasi untuk barang ini. Silakan datang ke pos security.'
+          : 'Siapkan pertanyaan verifikasi barang ini terlebih dahulu.',
+      );
+    }
+    // P10 A9: jawaban online hanya satu kali per klaim; percobaan berikutnya langsung di pos.
+    const usedOnline = data.claims.some(
+      (c) => c.itemId === itemId && sameName(c.claimantName, input.claimantName) && c.source === 'ONLINE',
+    );
+    if (source === 'ONLINE' && usedOnline) {
+      return fail('Jawaban verifikasi online hanya dapat dikirim satu kali. Percobaan berikutnya dilakukan langsung di pos security.');
+    }
+    let missing = false;
+    answers = questions.map((question, index) => {
+      const given = input.answers?.[index] ?? {};
+      const dontRemember = Boolean(given.dontRemember);
+      const answer = dontRemember ? '' : clean(given.answer);
+      if (!dontRemember && !answer) missing = true;
+      return { question, answer, dontRemember, correct: false };
+    });
+    if (missing) {
+      return fail('Periksa kembali isian yang ditandai.', { answers: 'Jawab semua pertanyaan atau pilih "Tidak ingat".' });
+    }
+  }
+
   const claim = {
     id: nextId('CLM', data.claims),
     itemId,
     claimantName: clean(input.claimantName),
     proofNotes: clean(input.proofNotes),
+    // US8 ("Verifikasi & Kode Klaim"): barang bernilai tinggi mendapat kode klaim.
+    answers,
+    claimCode: item.highValue ? `CLM-${itemId.split('-').pop()}-${codeSuffix}` : '',
     status: 'PENDING',
     verifierName: '',
     rejectReason: '',
@@ -142,13 +217,36 @@ export function approveClaim(data, claimId, input, now = new Date()) {
   if (claim.status !== 'PENDING') return fail('Hanya klaim yang menunggu verifikasi yang dapat disetujui.');
   if (getApprovedClaim(data, claim.itemId)) return fail('Sudah ada klaim lain yang disetujui untuk barang ini.');
 
+  const item = data.items.find((i) => i.id === claim.itemId);
   const errors = {};
   if (!clean(input.verifierName)) errors.verifierName = 'Isi nama petugas yang memverifikasi.';
   if (input.proofMatches !== true) errors.proofMatches = 'Centang untuk menegaskan bahwa bukti sesuai dengan catatan barang.';
+
+  // US8 / AC8.1-8.2: barang bernilai tinggi wajib lolos verifikasi pertanyaan sebelum disetujui.
+  let assessed = claim.answers ?? [];
+  if (item?.highValue) {
+    if (assessed.length === 0) {
+      errors.marks = 'Klaim ini belum memuat jawaban verifikasi.';
+    } else {
+      const marks = Array.isArray(input.marks) ? input.marks : [];
+      assessed = assessed.map((a, i) => ({ ...a, correct: marks[i] === true && !a.dontRemember }));
+      const correct = assessed.filter((a) => a.correct).length;
+      const needed = passThreshold(assessed.length);
+      if (correct < needed) {
+        errors.marks = `Verifikasi belum terpenuhi: ${correct} dari ${assessed.length} jawaban dinilai benar, minimal ${needed}.`;
+      }
+    }
+  }
   if (Object.keys(errors).length > 0) return fail('Verifikasi belum dapat disetujui.', errors);
 
+  // P10 A10: hasil penilaian, nama petugas, dan waktu verifikasi dicatat.
   return succeed(
-    updateClaim(data, claimId, { status: 'APPROVED', verifierName: clean(input.verifierName), reviewedAt: now.toISOString() }),
+    updateClaim(data, claimId, {
+      status: 'APPROVED',
+      verifierName: clean(input.verifierName),
+      reviewedAt: now.toISOString(),
+      answers: assessed,
+    }),
   );
 }
 
@@ -175,7 +273,7 @@ export function canHandOver(data, itemId) {
   return getApprovedClaim(data, itemId) !== null;
 }
 
-// R8 / C1: barang HANYA berstatus RETURNED lewat fungsi ini,
+// R8 / C1 / aturan baru Security: barang HANYA berstatus RETURNED lewat fungsi ini,
 // dan fungsi ini menolak jika belum ada klaim yang disetujui petugas.
 export function markReturned(data, itemId, input = {}, now = new Date()) {
   const item = data.items.find((i) => i.id === itemId);
@@ -183,7 +281,13 @@ export function markReturned(data, itemId, input = {}, now = new Date()) {
   if (item.status === 'RETURNED') return fail('Barang ini sudah ditandai dikembalikan.');
 
   const approved = getApprovedClaim(data, itemId);
-  if (!approved) return fail('Penyerahan ditahan: petugas belum menyetujui bukti kepemilikan.');
+  if (!approved) {
+    return fail(
+      item.highValue
+        ? 'Penyerahan ditahan: barang bernilai tinggi harus diverifikasi petugas terlebih dahulu.'
+        : 'Penyerahan ditahan: petugas belum menyetujui bukti kepemilikan.',
+    );
+  }
 
   const reason = 'Barang sudah dikembalikan kepada pengklaim lain.';
   return succeed({
@@ -202,13 +306,16 @@ export function markReturned(data, itemId, input = {}, now = new Date()) {
   });
 }
 
-/* ---------- Tampilan mahasiswa dibatasi (pendukung alur klaim) ---------- */
+/* ---------- US7: tampilan mahasiswa dibatasi ---------- */
 
 export function getPublicItem(item) {
   const publicItem = {};
   PUBLIC_ITEM_FIELDS.forEach((field) => {
     publicItem[field] = item[field];
   });
+  publicItem.highValue = Boolean(item.highValue); // hanya penanda, bukan rincian
+  // Pertanyaan verifikasi ditampilkan ke pengklaim (US8); bukan rincian barang.
+  publicItem.verificationQuestions = item.highValue ? [...(item.verificationQuestions ?? [])] : [];
   return publicItem;
 }
 
@@ -218,4 +325,8 @@ export function getPublicItems(items) {
 
 export function setStudentName(data, name) {
   return succeed({ ...data, studentName: String(name ?? '') });
+}
+
+function randomSuffix() {
+  return Math.random().toString(36).slice(2, 6).toUpperCase().padEnd(4, 'X');
 }

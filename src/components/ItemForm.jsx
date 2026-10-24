@@ -1,18 +1,19 @@
 import { useState } from 'react';
 import Field from './Field.jsx';
 import { CATEGORIES } from '../data/constants.js';
-import { todayString } from '../utils/itemUtils.js';
+import { isHighValueCategory, todayString } from '../utils/itemUtils.js';
 
 const emptyForm = () => ({
   category: '', color: '', brand: '', description: '', foundDate: todayString(), foundTime: '',
-  locationFound: '', handedOverBy: '', storageLocation: '',
+  locationFound: '', handedOverBy: '', storageLocation: '', highValue: false,
 });
 
-// US1 (R1): catat barang temuan.
+// US1 (R1): catat barang temuan + US8: penanda barang bernilai tinggi.
 export default function ItemForm({ onSubmit }) {
   const [form, setForm] = useState(emptyForm);
   const [errors, setErrors] = useState({});
   const [formError, setFormError] = useState('');
+  const locked = isHighValueCategory(form.category);
 
   const update = (name) => (event) => {
     const value = event.target.type === 'checkbox' ? event.target.checked : event.target.value;
@@ -71,6 +72,18 @@ export default function ItemForm({ onSubmit }) {
       <Field id="if-desc" label="Deskripsi umum *" error={errors.description}>
         <textarea id="if-desc" rows={3} value={form.description} onChange={update('description')} />
       </Field>
+
+      <label className="checkbox">
+        <input type="checkbox" checked={locked || form.highValue} disabled={locked} onChange={update('highValue')} />
+        <span>
+          Barang bernilai tinggi
+          <small>
+            {locked
+              ? ' (otomatis untuk jenis ini; penyerahan wajib diverifikasi petugas)'
+              : ' (centang bila perlu penanganan khusus; daftar jenis belum final, A5)'}
+          </small>
+        </span>
+      </label>
 
       <button className="primary-button" type="submit">Simpan Catatan</button>
     </form>
